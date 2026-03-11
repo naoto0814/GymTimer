@@ -1,98 +1,147 @@
-import { Image } from 'expo-image';
-import { Platform, StyleSheet } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet, TextInput, ScrollView } from 'react-native';
+import { useState, useRef, useEffect } from 'react';
 
-import { HelloWave } from '@/components/hello-wave';
-import ParallaxScrollView from '@/components/parallax-scroll-view';
-import { ThemedText } from '@/components/themed-text';
-import { ThemedView } from '@/components/themed-view';
-import { Link } from 'expo-router';
-
-export default function HomeScreen() {
-  return (
-    <ParallaxScrollView
-      headerBackgroundColor={{ light: '#A1CEDC', dark: '#1D3D47' }}
-      headerImage={
-        <Image
-          source={require('@/assets/images/partial-react-logo.png')}
-          style={styles.reactLogo}
-        />
-      }>
-      <ThemedView style={styles.titleContainer}>
-        <ThemedText type="title">Welcome!</ThemedText>
-        <HelloWave />
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <ThemedText type="subtitle">Step 1: Try it</ThemedText>
-        <ThemedText>
-          Edit <ThemedText type="defaultSemiBold">app/(tabs)/index.tsx</ThemedText> to see changes.
-          Press{' '}
-          <ThemedText type="defaultSemiBold">
-            {Platform.select({
-              ios: 'cmd + d',
-              android: 'cmd + m',
-              web: 'F12',
-            })}
-          </ThemedText>{' '}
-          to open developer tools.
-        </ThemedText>
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <Link href="/modal">
-          <Link.Trigger>
-            <ThemedText type="subtitle">Step 2: Explore</ThemedText>
-          </Link.Trigger>
-          <Link.Preview />
-          <Link.Menu>
-            <Link.MenuAction title="Action" icon="cube" onPress={() => alert('Action pressed')} />
-            <Link.MenuAction
-              title="Share"
-              icon="square.and.arrow.up"
-              onPress={() => alert('Share pressed')}
-            />
-            <Link.Menu title="More" icon="ellipsis">
-              <Link.MenuAction
-                title="Delete"
-                icon="trash"
-                destructive
-                onPress={() => alert('Delete pressed')}
-              />
-            </Link.Menu>
-          </Link.Menu>
-        </Link>
-
-        <ThemedText>
-          {`Tap the Explore tab to learn more about what's included in this starter app.`}
-        </ThemedText>
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <ThemedText type="subtitle">Step 3: Get a fresh start</ThemedText>
-        <ThemedText>
-          {`When you're ready, run `}
-          <ThemedText type="defaultSemiBold">npm run reset-project</ThemedText> to get a fresh{' '}
-          <ThemedText type="defaultSemiBold">app</ThemedText> directory. This will move the current{' '}
-          <ThemedText type="defaultSemiBold">app</ThemedText> to{' '}
-          <ThemedText type="defaultSemiBold">app-example</ThemedText>.
-        </ThemedText>
-      </ThemedView>
-    </ParallaxScrollView>
-  );
+type ExerciseItem = {
+  name: string;
+  set: number;
+  interval: number;
 }
 
-const styles = StyleSheet.create({
-  titleContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-  },
-  stepContainer: {
-    gap: 8,
-    marginBottom: 8,
-  },
-  reactLogo: {
-    height: 178,
-    width: 290,
-    bottom: 0,
-    left: 0,
-    position: 'absolute',
-  },
-});
+type TimelineItem = {
+  name: string;
+  interval: number;
+  currentSet: number;
+  totalSets: number;
+}
+
+export default function HomeScreen() {
+  const [exerciseList, setExerciseList] = useState<ExerciseItem[]>([]);
+  const [timelineList, setTimelineList] = useState<TimelineItem[]>([]);
+
+  const [timeLeft, setTimeLeft] = useState(0);
+  const [currentExerciseIndex, setCurrentExerciseIndex] = useState(0);
+
+  const [isRunning, setIsRunning] = useState(false);
+  const [isEditing, setIsEditing] = useState(false);
+  const [hasStarted, setHasStarted] = useState(false);
+
+  const [newExerciseName, setNewExerciseName] = useState("");
+  const [newExerciseSet, setNewExerciseSet] = useState("");
+  const [newExerciseInterval, setNewExerciseInterval] = useState("");
+
+  const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  useEffect(() => {
+    const newTimeline: TimelineItem[] = [];
+
+    exerciseList.forEach(exercise => {
+      for (let i = 1; i <= exercise.set; i++) {
+        newTimeline.push({
+          name: exercise.name,
+          interval: exercise.interval,
+          currentSet: i,
+          totalSets: exercise.set
+        });
+      }
+    });
+    setTimelineList(newTimeline);
+  }, [exerciseList]);
+
+  useEffect(() => {
+    if (timelineList.length > 0) {
+      setTimeLeft(timelineList[0].interval);
+    }
+  }, [timelineList]);
+
+  return (
+    <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
+      <Text>{timelineList[currentExerciseIndex]?.name ?? ""}</Text>
+      <Text>{timeLeft}</Text>
+      <Text>{timelineList[currentExerciseIndex]?.currentSet}/{timelineList[currentExerciseIndex]?.totalSets}セット</Text>
+      <TouchableOpacity onPress={() => {
+        if (isRunning) {
+          clearInterval(intervalRef.current!);
+          setIsRunning(false);
+        } else {
+          setIsRunning(true);
+          intervalRef.current = setInterval(() => {
+            setTimeLeft(prev => {
+              if (prev <= 0) {
+                setIsRunning(false);
+                clearInterval(intervalRef.current!);
+                if (currentExerciseIndex < timelineList.length - 1) {
+                  setCurrentExerciseIndex(prevIndex => prevIndex + 1);
+                  setTimeLeft(timelineList[currentExerciseIndex + 1].interval);
+                }
+                return 0;
+              }
+              return prev - 1;
+            });
+          }, 1000);
+        }
+      }}>
+        <Text>{isRunning ? 'ストップ' : 'スタート'}</Text>
+      </TouchableOpacity>
+
+      <TouchableOpacity onPress={() => {
+        if (currentExerciseIndex >= timelineList.length - 1) return;
+        clearInterval(intervalRef.current!);
+        setCurrentExerciseIndex(prevIndex => prevIndex + 1);
+        setTimeLeft(timelineList[currentExerciseIndex + 1].interval);
+        setIsRunning(false);
+      }}>
+        <Text>スキップ</Text>
+      </TouchableOpacity>
+
+      {exerciseList.map((ex, index) => (
+        <View key={index} style={{ flexDirection: 'row', alignItems: 'center' }}>
+          <Text>{ex.name} - {ex.set}セット - {ex.interval}秒</Text>
+          <TouchableOpacity onPress={() => {
+            setExerciseList(prev => prev.filter((_, i) => i !== index));
+          }}>
+            <Text>削除</Text>
+          </TouchableOpacity>
+        </View>
+      ))}
+
+      <TouchableOpacity onPress={() => setIsEditing(prev => !prev)}>
+        <Text>{isEditing ? '完了' : '編集'}</Text>
+      </TouchableOpacity>
+
+      <TextInput
+        placeholder="種目名"
+        value={newExerciseName}
+        onChangeText={setNewExerciseName}
+      />
+      <TextInput
+        placeholder="セット数"
+        keyboardType="numeric"
+        value={newExerciseSet}
+        onChangeText={setNewExerciseSet}
+      />
+      <TextInput
+        placeholder="インターバル"
+        keyboardType="numeric"
+        value={newExerciseInterval}
+        onChangeText={setNewExerciseInterval}
+      />
+
+      <TouchableOpacity onPress={() => {
+        if (!newExerciseName || !newExerciseSet || !newExerciseInterval) return;
+        const newExercise: ExerciseItem = {
+          name: newExerciseName,
+          set: parseInt(newExerciseSet),
+          interval: parseInt(newExerciseInterval),
+        }
+        setExerciseList(prev => [...prev, newExercise]);
+
+        setNewExerciseName("");
+        setNewExerciseSet("");
+        setNewExerciseInterval("");
+      }}>
+        <Text>追加</Text>
+      </TouchableOpacity>
+
+    </View>
+  );
+}
