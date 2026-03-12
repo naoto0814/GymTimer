@@ -1,6 +1,7 @@
 import { View, Text, TouchableOpacity, StyleSheet, TextInput, ScrollView } from 'react-native';
 import { useState, useRef, useEffect } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { useAudioPlayer } from 'expo-audio';
 
 type ExerciseItem = {
   name: string;
@@ -31,6 +32,8 @@ export default function HomeScreen() {
   const [newExerciseInterval, setNewExerciseInterval] = useState("");
 
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  const player = useAudioPlayer(require('../../assets/Clock-Alarm02-mp3/Clock-Alarm02/Clock-Alarm02-1(Loop).mp3'));
 
   useEffect(() => {
     const load = async () => {
@@ -87,6 +90,12 @@ export default function HomeScreen() {
                   setCurrentExerciseIndex(prevIndex => prevIndex + 1);
                   setTimeLeft(timelineList[currentExerciseIndex + 1].interval);
                 }
+                player.volume = 1.0;
+                player.seekTo(0);
+                player.play();
+                setTimeout(() => {                  
+                   player.pause();
+                }, 2000);
                 return 0;
               }
               return prev - 1;
