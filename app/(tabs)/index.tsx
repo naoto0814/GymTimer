@@ -1,7 +1,8 @@
-import { View, Text, TouchableOpacity, StyleSheet, TextInput, ScrollView } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet, TextInput, ScrollView, AppState } from 'react-native';
 import { useState, useRef, useEffect } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useAudioPlayer } from 'expo-audio';
+import * as Notifications from 'expo-notifications';
 
 type ExerciseItem = {
   name: string;
@@ -27,13 +28,37 @@ export default function HomeScreen() {
   const [newExerciseName, setNewExerciseName] = useState("");
   const [newExerciseSet, setNewExerciseSet] = useState("");
   const [newExerciseInterval, setNewExerciseInterval] = useState("");
+
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
-  const player = useAudioPlayer(require('../../assets/Clock-Alarm02-mp3/Clock-Alarm02/Clock-Alarm02-1(Loop).mp3'));
+  const backgroundTimeRef = useRef<number | null>(null);
+  //const player = useAudioPlayer(require('../../assets/Clock-Alarm02-mp3/Clock-Alarm02/Clock-Alarm02-1(Loop).mp3'));
+
+  const scheduleNotification = async (seconds: number) => {
+    await Notifications.cancelAllScheduledNotificationsAsync();
+    await Notifications.scheduleNotificationAsync({
+      content: {
+        title: 'インターバル終了',
+        body: '次のセットを始めましょう',
+        sound: true,
+      },
+      trigger: {
+        type: Notifications.SchedulableTriggerInputTypes.TIME_INTERVAL,
+        seconds: seconds,
+      },
+    });
+  };
+
+  const formatTime = (seconds: number) => {
+    const mins = Math.floor(seconds / 60);
+    const secs = seconds % 60;
+    return `${mins}:${secs < 10 ? '0' : ''}${secs}`;
+  };
 
   useEffect(() => {
     const load = async () => {
       const saved = await AsyncStorage.getItem('exerciseList');
       if (saved) setExerciseList(JSON.parse(saved));
+      await Notifications.requestPermissionsAsync();
     };
     load();
   }, []);
@@ -41,6 +66,42 @@ export default function HomeScreen() {
   useEffect(() => {
     AsyncStorage.setItem('exerciseList', JSON.stringify(exerciseList));
   }, [exerciseList]);
+
+  useEffect(() => {
+    // アプリの「状態（開いているか、閉じているか）」が変わるたびにここが動きます
+    const subscription = AppState.addEventListener('change', nextAppState => {
+      if(nextAppState==='inactive' || nextAppState==='background') {
+        if(backgroundTimeRef.current === null) {
+          backgroundTimeRef.current = Date.now();
+        }
+      }
+      if(nextAppState === 'active') {
+        if(backgroundTimeRef.current !== null) {
+          const timePassed = Math.floor((Date.now() - backgroundTimeRef.current) / 1000);
+          if(isRunning){
+            setTimeLeft(prev => Math.max(prev - timePassed, 0));
+          }
+          backgroundTimeRef.current = null;
+        }
+      }
+    });
+
+    return () => {
+      subscription.remove();
+    };
+  }, [isRunning]);  
+
+  useEffect(()=>{
+    if(timeLeft <= 0 && isRunning){
+      setIsRunning(false);
+      clearInterval(intervalRef.current!);
+      Notifications.cancelAllScheduledNotificationsAsync();
+      if(currentExerciseIndex < timelineList.length - 1){
+        setCurrentExerciseIndex(prevIndex => prevIndex + 1);
+        setTimeLeft(timelineList[currentExerciseIndex + 1].interval);
+      }
+    }
+  },[timeLeft,isRunning,currentExerciseIndex,timelineList]);
 
   useEffect(() => {
     const newTimeline: TimelineItem[] = [];
@@ -60,7 +121,7 @@ export default function HomeScreen() {
     <ScrollView contentContainerStyle={styles.container}>
       {/* タイマー画面 */}
       <Text style={styles.exerciseName}>{timelineList[currentExerciseIndex]?.name ?? "種目を追加してください"}</Text>
-      <Text style={styles.timer}>{timeLeft}</Text>
+      <Text style={styles.timer}>{formatTime(timeLeft)}</Text>
       <Text style={styles.setInfo}>
         {timelineList[currentExerciseIndex] ? `${timelineList[currentExerciseIndex].currentSet} / ${timelineList[currentExerciseIndex].totalSets} セット` : ""}
       </Text>
@@ -70,25 +131,12 @@ export default function HomeScreen() {
           if (isRunning) {
             clearInterval(intervalRef.current!);
             setIsRunning(false);
+            Notifications.cancelAllScheduledNotificationsAsync();
           } else {
             setIsRunning(true);
+            scheduleNotification(timeLeft);
             intervalRef.current = setInterval(() => {
-              setTimeLeft(prev => {
-                if (prev <= 0) {
-                  setIsRunning(false);
-                  clearInterval(intervalRef.current!);
-                  if (currentExerciseIndex < timelineList.length - 1) {
-                    setCurrentExerciseIndex(prevIndex => prevIndex + 1);
-                    setTimeLeft(timelineList[currentExerciseIndex + 1].interval);
-                  }
-                  player.volume = 1.0;
-                  player.seekTo(0);
-                  player.play();
-                  setTimeout(() => { player.pause(); }, 2000);
-                  return 0;
-                }
-                return prev - 1;
-              });
+              setTimeLeft(prev =>  prev - 1);
             }, 1000);
           }
         }}>
@@ -101,6 +149,7 @@ export default function HomeScreen() {
           setCurrentExerciseIndex(prevIndex => prevIndex + 1);
           setTimeLeft(timelineList[currentExerciseIndex + 1].interval);
           setIsRunning(false);
+          Notifications.cancelAllScheduledNotificationsAsync();
         }}>
           <Text style={styles.btnText}>スキップ</Text>
         </TouchableOpacity>
