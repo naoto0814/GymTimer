@@ -1,5 +1,6 @@
 import { View, Text, TouchableOpacity, StyleSheet, TextInput, ScrollView } from 'react-native';
 import { useState, useRef, useEffect } from 'react';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 type ExerciseItem = {
   name: string;
@@ -30,6 +31,19 @@ export default function HomeScreen() {
   const [newExerciseInterval, setNewExerciseInterval] = useState("");
 
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  useEffect(() => {
+    const load = async () => {
+      const saved = await AsyncStorage.getItem('exerciseList');
+      if (saved) {
+        setExerciseList(JSON.parse(saved));
+      }
+    };
+    load();
+  }, []);
+  useEffect(() => {
+    AsyncStorage.setItem('exerciseList', JSON.stringify(exerciseList));
+  }, [exerciseList]);
 
   useEffect(() => {
     const newTimeline: TimelineItem[] = [];
