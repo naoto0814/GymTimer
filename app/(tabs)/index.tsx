@@ -78,7 +78,7 @@ export default function HomeScreen() {
   }, [exerciseList]);
 
   useEffect(() => {
-    // アプリの「状態（開いているか、閉じているか）」が変わるたびにここが動きます
+    // アプリの状態（開いているか、閉じているか）
     const subscription = AppState.addEventListener('change', nextAppState => {
       if (nextAppState === 'inactive' || nextAppState === 'background') {
         if (backgroundTimeRef.current === null) {
@@ -179,7 +179,6 @@ export default function HomeScreen() {
 
         {/* 種目リスト */}
         {exerciseList.map((ex, index) => {
-          // 「?」は「もし timelineList が空っぽじゃなければ」という安全確認のエラー防止マークです
           const isActive = timelineList[currentExerciseIndex]?.originalIndex === index;
           return (
             <View
