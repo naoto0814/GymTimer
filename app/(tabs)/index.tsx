@@ -127,7 +127,7 @@ export default function HomeScreen() {
 
   useEffect(() => {
     if (timelineList.length > 0) setTimeLeft(timelineList[0].interval);
-  }, [timelineList]);
+  }, [timelineList,hasStarted]);
 
   return (
     <KeyboardAvoidingView style={{ flex: 1 }} behavior="padding">
@@ -140,13 +140,18 @@ export default function HomeScreen() {
         </Text>
 
         <View style={styles.btnRow}>
-          <TouchableOpacity style={styles.btn} onPress={() => {
+          <TouchableOpacity 
+          style={[styles.btn, isEditing&&{opacity:0.4}]} 
+          disabled={isEditing}
+
+          onPress={() => {
             if (isRunning) {
               clearInterval(intervalRef.current!);
               setIsRunning(false);
               Notifications.cancelAllScheduledNotificationsAsync();
             } else {
               setIsRunning(true);
+              setHasStarted(true);
               scheduleNotification(timeLeft);
               intervalRef.current = setInterval(() => {
                 setTimeLeft(prev => prev - 1);
@@ -156,7 +161,11 @@ export default function HomeScreen() {
             <Text style={styles.btnText}>{isRunning ? 'ストップ' : 'スタート'}</Text>
           </TouchableOpacity>
 
-          <TouchableOpacity style={styles.btn} onPress={() => {
+          <TouchableOpacity 
+          style={[styles.btn, isEditing&&{opacity:0.4}]}
+          disabled={isEditing}
+
+          onPress={() => {
             if (currentExerciseIndex >= timelineList.length - 1) return;
             clearInterval(intervalRef.current!);
             setCurrentExerciseIndex(prevIndex => prevIndex + 1);
@@ -194,9 +203,12 @@ export default function HomeScreen() {
                 <Text style={styles.numberText}>{ex.set} セット</Text>
                 <Text style={styles.numberText}>{ex.interval} 秒</Text>
               </View>
-              <TouchableOpacity onPress={() => setExerciseList(prev => prev.filter((_, i) => i !== index))}>
-                <Text style={styles.deleteBtn}>{isEditing ? '削除' : ''}</Text>
-              </TouchableOpacity>
+              {/* 💡 isEditing が true の時だけ、このボタン全体を描画する */}
+              {isEditing && (
+                <TouchableOpacity onPress={() => setExerciseList(prev => prev.filter((_, i) => i !== index))}>
+                  <Text style={styles.deleteBtn}>削除</Text>
+                </TouchableOpacity>
+              )}
             </View>
           );
         })}
@@ -282,18 +294,18 @@ const styles = StyleSheet.create({
   exerciseNameText: {
     color: '#ffffff',
     fontSize: 18,
-    flex: 1,         
-    marginRight: 10, 
+    flex: 1,
+    marginRight: 10,
   },
   numberWrap: {
-    flexDirection: 'row', 
-    alignItems: 'center', 
+    flexDirection: 'row',
+    alignItems: 'center',
   },
   numberText: {
     color: '#aaaaaa',
     fontSize: 16,
-    width: 65,        
-    textAlign: 'right', 
+    width: 65,
+    textAlign: 'right',
   },
   exerciseText: {
     color: '#ffffff',
