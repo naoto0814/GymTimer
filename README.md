@@ -1,50 +1,33 @@
-# Welcome to your Expo app 👋
+# GymTimer
 
-This is an [Expo](https://expo.dev) project created with [`create-expo-app`](https://www.npmjs.com/package/create-expo-app).
+筋トレのインターバルを自動で管理するスマートフォンアプリです。
 
-## Get started
+## 開発背景
 
-1. Install dependencies
+筋トレ中にiPhoneの時計アプリでタイマーを使っていましたが、種目ごとにインターバルを毎回設定し直す手間が小さなストレスになっていました。また、タイマー終了時に音楽が止まってしまうのも不便でした。
+App Storeで理想のアプリを探しましたが見つからなかったため、自分で開発することにしました。
 
-   ```bash
-   npm install
-   ```
+## 主な機能
 
-2. Start the app
+- 種目・セット数・インターバルの登録と保存
+- 種目終了後に次の種目へ自動遷移し、タイマーをリセット
+- バックグラウンド通知（他のアプリを使用中でもインターバル終了を通知）
+- 効果音（フォアグラウンド時）
+- データ永続化（アプリを閉じても種目が保持される）
 
-   ```bash
-   npx expo start
-   ```
+## 使用技術
 
-In the output, you'll find options to open the app in a
+- React Native / Expo
+- TypeScript
+- AsyncStorage（データ保存）
+- expo-audio（効果音）
+- expo-notifications（プッシュ通知）
 
-- [development build](https://docs.expo.dev/develop/development-builds/introduction/)
-- [Android emulator](https://docs.expo.dev/workflow/android-studio-emulator/)
-- [iOS simulator](https://docs.expo.dev/workflow/ios-simulator/)
-- [Expo Go](https://expo.dev/go), a limited sandbox for trying out app development with Expo
+## 開発期間
 
-You can start developing by editing the files inside the **app** directory. This project uses [file-based routing](https://docs.expo.dev/router/introduction).
+2026年3月
 
-## Get a fresh project
+## 開発環境
 
-When you're ready, run:
-
-```bash
-npm run reset-project
-```
-
-This command will move the starter code to the **app-example** directory and create a blank **app** directory where you can start developing.
-
-## Learn more
-
-To learn more about developing your project with Expo, look at the following resources:
-
-- [Expo documentation](https://docs.expo.dev/): Learn fundamentals, or go into advanced topics with our [guides](https://docs.expo.dev/guides).
-- [Learn Expo tutorial](https://docs.expo.dev/tutorial/introduction/): Follow a step-by-step tutorial where you'll create a project that runs on Android, iOS, and the web.
-
-## Join the community
-
-Join our community of developers creating universal apps.
-
-- [Expo on GitHub](https://github.com/expo/expo): View our open source platform and contribute.
-- [Discord community](https://chat.expo.dev): Chat with Expo users and ask questions.
+- Windows / VSCode
+- Expo Go（iPhoneで動作確認）
